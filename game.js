@@ -1,7 +1,7 @@
 const config = {
   type: Phaser.AUTO,
-  width: 800,
-  height: 600,
+  width: 1280,
+  height: 720,
   physics: {
     default: 'arcade',
     arcade: {
@@ -38,52 +38,71 @@ function renderMatrix(matrix, x, y) {
   const clickedIndices = []; // Store clicked indices
 
   function drawText(value, indexI, indexJ) {
-    const screenCoords = mapIndicesToScreen(indexI, indexJ);
-  
-    // Clear the previous text by drawing a rectangle with the background color
-    const rectWidth = 40; // Adjust based on your grid cell size
-    const rectHeight = 40;
-    this.add.rectangle(screenCoords.x, screenCoords.y, rectWidth, rectHeight, '#000').setOrigin(0);
-  
+
+    // Define the rectangle dimensions
+    const rectWidth = 60;
+    const rectHeight = 60;
+    const lineSize = 2;
+
+    const screenCoords = mapIndicesToScreen(indexI, indexJ, rectWidth);
+
+    // Clear the previous text by drawing a black rectangle
+    const clearRect = this.add.rectangle(
+        screenCoords.x + lineSize / 2,
+        screenCoords.y + lineSize / 2,
+        rectWidth - lineSize,
+        rectHeight - lineSize,
+        0x000000
+    ).setOrigin(0);
+
+    // Draw a transparent rectangle to cover the area
+    const hitArea = new Phaser.Geom.Rectangle(screenCoords.x, screenCoords.y, rectWidth, rectHeight);
+    const hitAreaGraphics = this.add.graphics({ fillStyle: { color: 0x000000, alpha: 0 } });
+
+    // Draw the border around the hit area
+    hitAreaGraphics.lineStyle(lineSize, 0xffffff); // Adjust line style as needed
+    hitAreaGraphics.strokeRectShape(hitArea);
+    hitAreaGraphics.fillRectShape(hitArea);
+
+    hitAreaGraphics.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
+
     // Draw the new text at the specified position
     const text = this.add.text(screenCoords.x + rectWidth / 2, screenCoords.y + rectHeight / 2, value, textStyle).setOrigin(0.5);
-  
-    // Add a click event to the text element
-    text.setInteractive().on('pointerdown', () => {
-      console.log("waduh", indexI, indexJ);
 
+    // Add a click event to the transparent rectangle
+    hitAreaGraphics.on('pointerdown', () => {
       // Display the (i, j) index at the bottom when clicked
       displayIndex.call(this, indexI, indexJ);
-  
+
       // Track clicked indices, limit to two elements
       clickedIndices.push({ i: indexI, j: indexJ });
-  
+
       // If two elements are present, perform the operation
       if (clickedIndices.length === 2) {
         const firstIndex = clickedIndices[0];
         const secondIndex = clickedIndices[1];
-  
+
         addColumnsAndClearFirst(matrix, firstIndex.i, firstIndex.j, secondIndex.i, secondIndex.j);
-  
+
         // Draw text only at the first and second index
         drawText.call(this, matrix[firstIndex.i][firstIndex.j], firstIndex.i, firstIndex.j);
         drawText.call(this, matrix[secondIndex.i][secondIndex.j], secondIndex.i, secondIndex.j);
-  
+
         // Clear the screen
         this.cameras.main.setBackgroundColor('#000');
-  
+
         clickedIndices.pop();
         clickedIndices.pop();
       }
     });
-  
-    elements.push(text);
+
+    elements.push(clearRect, hitAreaGraphics); // Add the clearRect and hitAreaGraphics to elements instead of text
   }
-  
-  function mapIndicesToScreen(i, j) {
+
+  function mapIndicesToScreen(i, j, siz) {
     // Implement your logic to map (i, j) to screen coordinates (x, y)
-    const posX = x + j * 40;
-    const posY = y + i * 40;
+    const posX = x + j * siz;
+    const posY = y + i * siz;
     return { x: posX, y: posY };
   }
 
@@ -98,6 +117,8 @@ function renderMatrix(matrix, x, y) {
 
 // Function to display the (x, y) index at the bottoj
 function displayIndex(x, y) {
+  console.log("alamakk", x, y);
+
   if (this.indexText) {
     this.indexText.destroy(); // Remove the previous index text
   }
@@ -126,16 +147,16 @@ function preload() {
 // Create the game scene
 function create() {
   // Add text for the matrix
-  const matrixText = this.add.text(400, 100, 'Matrix', { fontSize: '24px', fill: '#fff' }).setOrigin(0.5);
+  // const matrixText = this.add.text(400, 100, 'Matrix', { fontSize: '24px', fill: '#fff' }).setOrigin(0.5);
 
   // Initialize and render the matrix
   const matrix = initializeRandomMatrix(5, 5, 1, 10);
-  const matrixElements = renderMatrix.call(this, matrix, 300, 200);
+  const matrixElements = renderMatrix.call(this, matrix, (1280 - 300) / 2, (720 - 300) / 2);
 
-  // Add click event to matrix elements to display coordinates
-  this.input.on('gameobjectdown', (pointer, gameObject) => {
-    const { x, y } = gameObject;
-    const { value, x: elementX, y: elementY } = matrix[y / 40][x / 40];
-    displayIndex.call(this, elementX, elementY);
-  });
+  // // Add click event to matrix elements to display coordinates
+  // this.input.on('gameobjectdown', (pointer, gameObject) => {
+  //   const { x, y } = gameObject;
+  //   const { value, x: elementX, y: elementY } = matrix[y / 40][x / 40];
+  //   displayIndex.call(this, elementX, elementY);
+  // });
 }
